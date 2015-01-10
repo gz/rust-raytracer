@@ -20,19 +20,10 @@ struct Ray {
 }
 
 #[derive(Show, Clone)]
-enum Reflection {
-    DIFF,
-    SPEC,
-    REFR
-}
-
-#[derive(Show, Clone)]
 struct Sphere {
     radius: f64,
     position: Vector,
-    emission: Vector,
     color: Vector,
-    reflection: Reflection
 }
 
 trait Intersect {
@@ -151,8 +142,8 @@ fn intersect(r: Ray, t: &mut f64, id: &mut usize) -> bool
 }
 
 static SPHERES: [Sphere; 2] = [
-    Sphere{ radius: 150f64,  position: Vector{ x:212.0, y: 384.0, z: -1000f64},  emission: Vector{x: 0.0, y: 0.0, z: 0.0},  color: Vector{x: 0.25, y: 0.25, z: 0.75},   reflection: Reflection::DIFF},
-    Sphere{ radius: 150f64,  position: Vector{ x:590.0, y: 884.0, z: -1000f64},  emission: Vector{x: 0.0, y: 0.0, z: 0.0},  color: Vector{x: 0.25, y: 0.25, z: 0.75},   reflection: Reflection::DIFF},
+    Sphere{ radius: 150f64,  position: Vector{ x:212.0, y: 384.0, z: -1000f64}, color: Vector{x: 0.25, y: 0.25, z: 0.75} },
+    Sphere{ radius: 150f64,  position: Vector{ x:590.0, y: 884.0, z: -1000f64}, color: Vector{x: 0.25, y: 0.50, z: 0.75} },
 ];
 
 
@@ -173,9 +164,7 @@ fn main() {
             let mut t: f64 = 0.0;
             let mut id: usize = 0;
             if intersect(ray, &mut t, &mut id) {
-                output[i][j].x = 0.9;
-                output[i][j].y = 0.9;
-                output[i][j].z = 0.9;
+                output[i][j] = SPHERES[id].color;
             }
             else {
                 output[i][j].x = 0.5;
