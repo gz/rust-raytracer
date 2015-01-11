@@ -1,9 +1,10 @@
 # Raytracers in Rust
 
-This repo contains a few very basic raytracer implementations written in Rust:
+This repo contains a few very basic raytracer implementations written in Rust.
+They are listed here in increasing order of complexity:
 
- * raytracer_2d.rs: Ver simple raytracer that produces a 2D image with orthographic projection.
- * raytracer_pinhole.rs: Similar to the one above but now adds a pinhole camera.
+ 1. raytracer_2d.rs: Ver simple raytracer that produces a 2D image with orthographic projection.
+ 2. raytracer_pinhole.rs: Similar to the one above but now adds a pinhole camera.
 
 The code is inspired by the book [Realistic Ray Tracing (2nd Edition)][2] by Peter Shirley and R. Keith Morley and the [smallpt][1] project.
     
