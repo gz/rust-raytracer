@@ -34,12 +34,16 @@ struct Camera {
     up: Vector, // up vector
 }
 
-trait Intersect {
+trait Shape {
     fn intersect(self, r: Ray) -> f64;
 }
 
+trait ShapeRef {
+    fn color(self, r: &Ray, t: f64) -> Vector;
+}
 
-impl Intersect for Sphere {
+
+impl Shape for Sphere {
     fn intersect(self, r: Ray) -> f64 {
         // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
         let eps = 1e-4;
@@ -64,6 +68,22 @@ impl Intersect for Sphere {
         return 0.0;
     }
 }
+
+static LIGHT: Ray = Ray { o: Vector{x: 0.0, y: 0.0, z: 0.0 }, d: Vector{x: 0.0, y: 0.0, z: 1.0 } };
+
+impl<'a> ShapeRef for &'a Sphere {
+
+    fn color(self, r: &Ray, t: f64) -> Vector {
+        let color: Vector = Vector{x: 1.0, y: 1.0, z: 1.0};
+        
+        let intersection = r.d.smul(t);
+        let surface_normal = (&(&r.o + &intersection) - &self.position).norm();
+        let diffuse_factor = surface_normal.dot( &(&LIGHT.o + &LIGHT.d) ) ;
+
+        color.smul(diffuse_factor)
+    }
+}
+
 
 impl<'a> Add for &'a Vector {
     type Output = Vector;
@@ -196,7 +216,7 @@ fn main() {
             let mut t: f64 = 0.0;
             let mut id: usize = 0;
             if intersect(ray, &mut t, &mut id) {
-                output[i][j] = SPHERES[id].color;
+                output[i][j] = (&SPHERES[id]).color(&ray, t);
             }
             else {
                 output[i][j].x = 0.5;
