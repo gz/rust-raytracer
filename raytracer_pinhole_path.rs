@@ -6,8 +6,6 @@ use std::ops::{Add, Sub, Mul};
 use std::num::Float;
 use std::default::Default;
 use std::rand::random;
-use std::thread::Thread;
-use std::sync::Arc;
 
 #[derive(Show, Copy, Clone, Default)]
 struct Vector {
@@ -157,18 +155,6 @@ fn intersect(r: Ray, t: &mut f64, id: &mut usize) -> bool
 
 }
 
-static SPHERES: [Sphere; 9] = [
-    Sphere{radius:1e5 as f64,  position: Vector{ x: (1e5 + 1.0) as f64, y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.25,z: 0.25}}, // Left 
-    Sphere{radius:1e5 as f64,  position: Vector{ x:  -1e5 as f64 + 99.0,y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.25,y: 0.25,z: 0.75}}, // Rght 
-    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: 40.8 as f64, z: 1e5 as f64}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Back 
-    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: 40.8 as f64, z: -1e5+600 as f64}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 1.0, y: 1.0, z: 1.0 }}, // Frnt 
-    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y:  1e5 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Botm 
-    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: -1e5+81.6 as f64,z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Top 
-    Sphere{radius:16.5, position: Vector{ x: 27.0, y: 16.5 as f64, z: 47.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.999, y: 0.999, z: 0.999}}, // Mirr 
-    Sphere{radius:16.5, position: Vector{ x: 73.0, y: 16.5 as f64, z: 78.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.999, y: 0.999, z: 0.999}}, // Glas 
-    Sphere{radius:600 as f64,  position: Vector{ x: 50 as f64, y: 681.6-0.27 as f64, z: 81.6}, emission: Vector{x: 12.0, y: 12.0, z: 12.0}, color: Vector{x: 1.0, y: 1.0, z: 1.0}}, //Lite 
-];
-
 fn get_ray(cam: &Camera, a: usize, b: usize) -> Ray {
     
     let w = cam.eye.d.norm().smul(-1.0);
@@ -190,13 +176,6 @@ fn get_ray(cam: &Camera, a: usize, b: usize) -> Ray {
     let target = &( &corner + &across.smul(an)) + &up.smul(bn);
     Ray{o: cam.eye.o, d: (&target-&cam.eye.o).norm()}
 }
-
-
-const WIDTH: usize = 1024;
-const HEIGHT: usize = 768;
-
-
-static PI: f64 = 3.14159265358979323846264338327950288_f64;
 
 fn get_light(ray: Ray, depth: usize) -> Vector{ 
 
@@ -229,7 +208,22 @@ fn get_light(ray: Ray, depth: usize) -> Vector{
 
 }
 
-static NTHREADS: usize = 4;
+static SPHERES: [Sphere; 9] = [
+    Sphere{radius:1e5 as f64,  position: Vector{ x: (1e5 + 1.0) as f64, y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.25,z: 0.25}}, // Left 
+    Sphere{radius:1e5 as f64,  position: Vector{ x:  -1e5 as f64 + 99.0,y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.25,y: 0.25,z: 0.75}}, // Rght 
+    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: 40.8 as f64, z: 1e5 as f64}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Back 
+    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: 40.8 as f64, z: -1e5+600 as f64}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 1.0, y: 1.0, z: 1.0 }}, // Frnt 
+    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y:  1e5 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Botm 
+    Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: -1e5+81.6 as f64,z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Top 
+    Sphere{radius:16.5, position: Vector{ x: 27.0, y: 16.5 as f64, z: 47.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.999, y: 0.999, z: 0.999}}, // Mirr 
+    Sphere{radius:16.5, position: Vector{ x: 73.0, y: 16.5 as f64, z: 78.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.999, y: 0.999, z: 0.999}}, // Glas 
+    Sphere{radius:600 as f64,  position: Vector{ x: 50 as f64, y: 681.6-0.27 as f64, z: 81.6}, emission: Vector{x: 12.0, y: 12.0, z: 12.0}, color: Vector{x: 1.0, y: 1.0, z: 1.0}}, //Lite 
+];
+
+const WIDTH: usize = 1024;
+const HEIGHT: usize = 768;
+//static NTHREADS: usize = 4;
+static PI: f64 = 3.14159265358979323846264338327950288_f64;
 
 fn main() {
     let mut cam: Camera = Default::default();
