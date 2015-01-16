@@ -6,6 +6,10 @@ use std::ops::{Add, Sub, Mul};
 use std::num::Float;
 use std::default::Default;
 use std::rand::random;
+use std::sync::TaskPool;
+use std::sync::mpsc::channel;
+use std::sync::mpsc::{Sender, Receiver};
+
 
 #[derive(Show, Copy, Clone, Default)]
 struct Vector {
@@ -28,7 +32,7 @@ struct Sphere {
     color: Vector,
 }
 
-#[derive(Show, Default)]
+#[derive(Show, Default, Clone)]
 struct Camera {
     eye: Ray, // origin and direction of cam
     // Field of view:
@@ -178,34 +182,32 @@ fn get_ray(cam: &Camera, a: usize, b: usize) -> Ray {
 }
 
 fn get_light(ray: Ray, depth: usize) -> Vector{ 
-
-    if depth > 5 {
-        return Default::default();
-    }
-
     let mut t: f64 = 0.0;
     let mut id: usize = 0;
     if intersect(ray, &mut t, &mut id) {
-        let r1: f64 = 2.0 * std::rand::random() * PI;
+        if depth > 5 {
+            return SPHERES[id].emission;
+        }
+
+        let r1: f64 = 2.0 * PI* std::rand::random();
         let r2: f64 = std::rand::random();
         let r2s: f64 = r2.sqrt();
 
-        let x: Vector = &ray.o + &ray.d.smul(t); // Hitpoint
+
+        // Hitpoint
+        let x: Vector = &ray.o + &ray.d.smul(t);
         let n: Vector = (&x - &SPHERES[id].position).norm();
         let nl = if n.dot(&ray.d) < 0.0 { n } else { n.smul(-1.0) };
         
         let w = nl;
-        let u = if w.x > 0.1 { Vector{x: 0.0, y: 1.0, z: 0.0} } else { Vector{x: 1.0, y: 0.0, z: 0.0 } }.norm();
+        let u = if w.x.abs() > 0.1 { Vector{x: 0.0, y: 1.0, z: 0.0} } else { Vector{x: 1.0, y: 0.0, z: 0.0 } }.cross(w).norm();
         let v = w.cross(u);
 
-        let d = &(&u.smul(r1.cos()*r2s)  + &v.smul(r1.sin()*r2s)) + &w.smul((1.0-r2).sqrt());
-        
-
+        let d = (&(&u.smul( r1.cos()*r2s )  + &v.smul(r1.sin()*r2s)) + &w.smul((1.0-r2).sqrt())).norm();
         return &SPHERES[id].emission + &(&SPHERES[id].color * &get_light(Ray{o: x, d: d}, depth+1));
     }
 
     return Default::default();
-
 }
 
 static SPHERES: [Sphere; 9] = [
@@ -219,33 +221,54 @@ static SPHERES: [Sphere; 9] = [
     Sphere{radius:16.5, position: Vector{ x: 73.0, y: 16.5 as f64, z: 78.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.999, y: 0.999, z: 0.999}}, // Glas 
     Sphere{radius:600 as f64,  position: Vector{ x: 50 as f64, y: 681.6-0.27 as f64, z: 81.6}, emission: Vector{x: 12.0, y: 12.0, z: 12.0}, color: Vector{x: 1.0, y: 1.0, z: 1.0}}, //Lite 
 ];
+/*
+static SPHERES: [Sphere; 2] = [
+    Sphere{ radius: 1.41,  position: Vector{ x:0.0, y: 0.0, z: -1.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0}, color: Vector{x: 0.25, y: 0.50, z: 0.75} },
+    Sphere{ radius: 40.0,  position: Vector{ x:0.0, y: 9.0, z: 100.0}, emission: Vector{x: 12.0, y: 12.0, z: 12.0}, color: Vector{x: 1.0, y: 1.0, z: 1.0} },
+];*/
 
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 768;
-//static NTHREADS: usize = 4;
+static NTHREADS: usize = 4;
 static PI: f64 = 3.14159265358979323846264338327950288_f64;
 
 fn main() {
+    
     let mut cam: Camera = Default::default();
     cam.eye.o = Vector {x: 50.0, y: 52.0, z: 295.6};
     cam.eye.d = Vector {x: 0.0, y: -0.042612, z: -1.0};
     cam.up = Vector{x: 1.0, y: 0.0, z: 0.0};
-    let samples = 500;
-    let mut output = box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
+    /*let mut cam: Camera = Default::default();
+    cam.eye.o = Vector {x: 0.0, y: 0.0, z: 4.0};
+    cam.eye.d = Vector {x: 0.0, y: 0.0, z: -2.0};
+    cam.up = Vector{x: 0.0, y: 1.0, z: 0.0};*/
+
+    let pool = TaskPool::new(NTHREADS);
+    let (tx, rx):  (Sender<(usize, usize, Vector)>, Receiver<(usize, usize, Vector)>) = channel();
+
+    let samples: usize = 50;
+    let mut output =  box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
 
     for i in range(0, HEIGHT) {
-        print!("\rRaytracing... ({:.0}%)", 100.0 - ((WIDTH*(HEIGHT-i)*samples) as f64) / ((WIDTH*HEIGHT*samples) as  f64) * 100.0);
         for j in range(0, WIDTH) {
-            let mut r: Vector = Default::default();
-
-            for _ in range(0, samples) {
-                let ray: Ray = get_ray(&cam, i, j);
-                r = &r + &get_light(ray, 0).smul(1.0/samples as f64);
-            }
-            output[i][j] = Vector{ x: clamp(r.x), y: clamp(r.y), z: clamp(r.z) };
+            let tx = tx.clone();
+            let cam = cam.clone();
+            pool.execute(move|| {
+                let mut r: Vector = Default::default();
+                for _ in range(0, samples) {
+                    let ray: Ray = get_ray(&cam, i, j);
+                    r = &r + &get_light(ray, 0).smul(1.0/samples as f64);
+                }
+                tx.send((i, j, Vector{ x: clamp(r.x), y: clamp(r.y), z: clamp(r.z) })).unwrap();
+            });
         }
     }
 
+    for p in range(0,WIDTH*HEIGHT-1) {
+        print!("\rRaytracing... ({:.0}%)", (p as f64) / ((WIDTH*HEIGHT) as f64) * 100.0);
+        let (i, j, color) = rx.recv().unwrap(); 
+        output[i][j] = color;
+    }
     println!("\nWriting Image...");
     let file = File::create(&Path::new("image.ppm"));
     let mut writer = BufferedWriter::new(file);
