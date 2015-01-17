@@ -1,4 +1,6 @@
-# Raytracers in Rust
+## Raytracers in Rust
+
+[![Build Status](https://travis-ci.org/gz/rust-raytracer.svg)](https://travis-ci.org/gz/rust-raytracer)
 
 This repository contains a few very simple raytracer implementations written in Rust. They are listed here in increasing order of complexity:
 
