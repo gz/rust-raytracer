@@ -20,7 +20,9 @@ This repository contains a few very simple raytracer implementations written in 
     up until a maximum depth of 4. Rays are sampled randomly using a 
     monte-carlo based approach.
 
-    <img src="https://raw.githubusercontent.com/gz/rust-raytracer/master/raytracer_pinhole_path_5k.jpg" height="76" width="103" >
+    |<img src="https://raw.githubusercontent.com/gz/rust-raytracer/master/raytracer_pinhole_path_5k.jpg" height="76" width="103" align="left">|<img src="https://raw.githubusercontent.com/gz/rust-raytracer/master/raytracer_pinhole_path_10k.jpg" height="76" width="103" >|
+    |:---:|:---:|
+    |5k samples|10k samples|
 
 The code is inspired by the book [Realistic Ray Tracing (2nd Edition)][2] by Peter Shirley and R. Keith Morley and the [smallpt][1] project.
     
