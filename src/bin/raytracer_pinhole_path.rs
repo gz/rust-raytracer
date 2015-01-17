@@ -224,7 +224,6 @@ static SPHERES: [Sphere; 9] = [
 
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 768;
-static NTHREADS: usize = 4;
 static PI: f64 = 3.14159265358979323846264338327950288_f64;
 
 fn main() {
@@ -234,10 +233,10 @@ fn main() {
     cam.eye.d = Vector {x: 0.0, y: -0.042612, z: -1.0};
     cam.up = Vector{x: 1.0, y: 0.0, z: 0.0};
 
-    let pool = TaskPool::new(NTHREADS);
+    let pool = TaskPool::new(std::os::num_cpus());
     let (tx, rx):  (Sender<(usize, usize, Vector)>, Receiver<(usize, usize, Vector)>) = channel();
 
-    let samples: usize = 50;
+    let samples: usize = 5000;
     let mut output =  box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
 
     for i in range(0, HEIGHT) {
