@@ -1,0 +1,6 @@
+[package]
+
+name = "raytracer"
+version = "0.0.1"
+authors = ["Gerd Zellweger <mail@gerdzellweger.com>"]
+
