@@ -221,11 +221,6 @@ static SPHERES: [Sphere; 9] = [
     Sphere{radius:16.5, position: Vector{ x: 73.0, y: 16.5 as f64, z: 78.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.999, y: 0.999, z: 0.999}}, // Glas 
     Sphere{radius:600 as f64,  position: Vector{ x: 50 as f64, y: 681.6-0.27 as f64, z: 81.6}, emission: Vector{x: 12.0, y: 12.0, z: 12.0}, color: Vector{x: 1.0, y: 1.0, z: 1.0}}, //Lite 
 ];
-/*
-static SPHERES: [Sphere; 2] = [
-    Sphere{ radius: 1.41,  position: Vector{ x:0.0, y: 0.0, z: -1.0}, emission: Vector{x: 0.0, y: 0.0, z: 0.0}, color: Vector{x: 0.25, y: 0.50, z: 0.75} },
-    Sphere{ radius: 40.0,  position: Vector{ x:0.0, y: 9.0, z: 100.0}, emission: Vector{x: 12.0, y: 12.0, z: 12.0}, color: Vector{x: 1.0, y: 1.0, z: 1.0} },
-];*/
 
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 768;
@@ -238,10 +233,6 @@ fn main() {
     cam.eye.o = Vector {x: 50.0, y: 52.0, z: 295.6};
     cam.eye.d = Vector {x: 0.0, y: -0.042612, z: -1.0};
     cam.up = Vector{x: 1.0, y: 0.0, z: 0.0};
-    /*let mut cam: Camera = Default::default();
-    cam.eye.o = Vector {x: 0.0, y: 0.0, z: 4.0};
-    cam.eye.d = Vector {x: 0.0, y: 0.0, z: -2.0};
-    cam.up = Vector{x: 0.0, y: 1.0, z: 0.0};*/
 
     let pool = TaskPool::new(NTHREADS);
     let (tx, rx):  (Sender<(usize, usize, Vector)>, Receiver<(usize, usize, Vector)>) = channel();
@@ -269,6 +260,7 @@ fn main() {
         let (i, j, color) = rx.recv().unwrap(); 
         output[i][j] = color;
     }
+    
     println!("\nWriting Image...");
     let file = File::create(&Path::new("image.ppm"));
     let mut writer = BufferedWriter::new(file);

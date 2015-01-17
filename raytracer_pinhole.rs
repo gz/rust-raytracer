@@ -210,8 +210,6 @@ fn main() {
     let mut output = box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
     for i in range(0, HEIGHT) {
         for j in range(0, WIDTH) {
-            //let origin: Vector = Vector { x: i as f64, y: j as f64, z: 0.0};
-            //let direction: Vector = Vector { x: 0.0, y: 0.0, z: -1.0};
             let ray: Ray = get_ray(&cam, i, j);
             let mut t: f64 = 0.0;
             let mut id: usize = 0;

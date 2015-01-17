@@ -156,7 +156,6 @@ fn main() {
     let mut output = box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
     for i in range(0, HEIGHT) {
         for j in range(0, WIDTH) {
-            //println!("i, j = ({}, {})", i, j);
             let origin: Vector = Vector { x: i as f64, y: j as f64, z: 0.0};
             let direction: Vector = Vector { x: 0.0, y: 0.0, z: -1.0};
             let ray: Ray = Ray{o: origin, d: direction};
