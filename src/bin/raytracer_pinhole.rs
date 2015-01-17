@@ -74,11 +74,11 @@ static LIGHT: Ray = Ray { o: Vector{x: 0.0, y: 0.0, z: 0.0 }, d: Vector{x: 0.0, 
 impl<'a> ShapeRef for &'a Sphere {
 
     fn color(self, r: &Ray, t: f64) -> Vector {
-        let color: Vector = Vector{x: 1.0, y: 1.0, z: 1.0};
+        let color: Vector = Vector{x: 0.75, y: 0.75, z: 0.75};
         
         let intersection = r.d.smul(t);
         let surface_normal = (&(&r.o + &intersection) - &self.position).norm();
-        let diffuse_factor = surface_normal.dot( &(&LIGHT.o + &LIGHT.d) ) ;
+        let diffuse_factor = surface_normal.dot( &(&LIGHT.o + &LIGHT.d).norm() ) ;
 
         color.smul(diffuse_factor)
     }
@@ -179,11 +179,11 @@ fn get_ray(cam: &Camera, a: usize, b: usize) -> Ray {
     let u = cam.up.cross(w).norm();
     let v = w.cross(u);
 
-    let u0 = -2.0;
-    let v0 = -2.0;
-    let u1 = 2.0;
-    let v1 = 2.0;
-    let d = 2.0;
+    let u0 = -1.0;
+    let v0 = -1.0;
+    let u1 = 1.0;
+    let v1 = 1.0;
+    let d = 1.0;
 
     let across = u.smul(u1-u0);
     let up = v.smul(v1-v0);
@@ -196,15 +196,15 @@ fn get_ray(cam: &Camera, a: usize, b: usize) -> Ray {
 }
 
 
-const WIDTH: usize = 900;
-const HEIGHT: usize = 900;
+const WIDTH: usize = 500;
+const HEIGHT: usize = 500;
 
 fn main() {
     println!("Raytracing...");
 
     let mut cam: Camera = Default::default();
-    cam.eye.o = Vector {x: 0.0, y: 0.0, z: 2.0};
-    cam.eye.d = Vector {x: 0.0, y: 0.0, z: -2.0};
+    cam.eye.o = Vector {x: 0.0, y: 0.0, z: 1.0};
+    cam.eye.d = Vector {x: 0.0, y: 0.0, z: -1.0};
     cam.up = Vector{x: 0.0, y: 1.0, z: 0.0};
 
     let mut output = box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
@@ -217,9 +217,9 @@ fn main() {
                 output[i][j] = (&SPHERES[id]).color(&ray, t);
             }
             else {
-                output[i][j].x = 0.5;
-                output[i][j].y = 0.5;
-                output[i][j].z = 0.5;
+                output[i][j].x = 0.25;
+                output[i][j].y = 0.25;
+                output[i][j].z = 0.25;
             }
         }
     }

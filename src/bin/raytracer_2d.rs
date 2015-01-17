@@ -142,13 +142,13 @@ fn intersect(r: Ray, t: &mut f64, id: &mut usize) -> bool
 }
 
 static SPHERES: [Sphere; 2] = [
-    Sphere{ radius: 150f64,  position: Vector{ x:212.0, y: 384.0, z: -1000f64}, color: Vector{x: 0.25, y: 0.25, z: 0.75} },
-    Sphere{ radius: 150f64,  position: Vector{ x:590.0, y: 884.0, z: -1000f64}, color: Vector{x: 0.25, y: 0.50, z: 0.75} },
+    Sphere{ radius: 150f64,  position: Vector{ x:212.0, y: 284.0, z: -1000f64}, color: Vector{x: 0.25, y: 0.25, z: 0.75} },
+    Sphere{ radius: 150f64,  position: Vector{ x:300.0, y: 200.0, z: -1000f64}, color: Vector{x: 0.25, y: 0.50, z: 0.75} },
 ];
 
 
-const WIDTH: usize = 1024;
-const HEIGHT: usize = 768;
+const WIDTH: usize = 500;
+const HEIGHT: usize = 500;
 
 fn main() {
     println!("Raytracing...");
