@@ -1,4 +1,12 @@
 [root]
 name = "raytracer"
 version = "0.0.1"
+dependencies = [
+ "opencl 0.3.0-dev (git+https://github.com/luqmana/rust-opencl.git)",
+]
+
+[[package]]
+name = "opencl"
+version = "0.3.0-dev"
+source = "git+https://github.com/luqmana/rust-opencl.git#c4a517439ead10e226120885a2658d288ab30ab2"
 

@@ -1,0 +1,198 @@
+__constant uint WIDTH = 1024;
+__constant uint HEIGHT = 768;
+__constant uint SAMPLES = 100;
+__constant uint SPHERES_COUNT = 9;
+__constant float PI = 3.14159265358979323846264338327950288f;
+
+float srand(unsigned int* seed)
+{
+  *seed = ((*seed) * 16807 ) % 2147483647;
+  return  (float)(*seed) * 4.6566129e-10;
+}
+
+
+struct Ray {
+    float3 o;
+    float3 d;
+};
+
+struct Sphere {
+    float radius;
+    float3 position;
+    float3 emission;
+    float3 color;
+};
+
+struct Camera {
+    struct Ray eye; // origin and direction of cam
+    float3 right; // Field of view
+    float3 up; // up vector
+};
+
+
+__constant struct Sphere SPHERES[] = {
+   (struct Sphere){1e5f, (float3) { 1e5+1.0f,40.8f,81.6f},   (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .25f, .25f} }, //Left 
+   (struct Sphere){1e5f, (float3) {-1e5+99.0f,40.8f,81.6f},  (float3) {0.0f, 0.0f, 0.0f}, (float3) {.25f, .25f, .75f} }, //Rght 
+   (struct Sphere){1e5f, (float3) {50.0f, 40.8f, 1e5f},      (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .75f, .75f} }, //Back 
+   (struct Sphere){1e5f, (float3) {50.0f, 40.8f,-1e5+170.0f},  (float3) {0.0f, 0.0f, 0.0f}, (float3) {.00f, .00f, .00f} }, //Frnt 
+   (struct Sphere){1e5f, (float3) {50.0f, 1e5f, 81.6f},      (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .75f, .75f} }, //Botm 
+   (struct Sphere){1e5f, (float3) {50.0f,-1e5f+81.6f,81.6f}, (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .75f, .75f} }, //Top 
+   (struct Sphere){16.5f,(float3) {27.0f,16.5f,47.0f},         (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.0f, 1.0f, 1.0f*.999f} }, 
+   (struct Sphere){16.5f,(float3) {73.0f,16.5f,78.0f},         (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.0f, 1.0f, 1.0f*.999f} },
+   (struct Sphere){600.0f, (float3) {50.0f,681.6f-0.27f,81.6f}, (float3) {12.0f, 12.0f, 12.0f},(float3) {0.0f, 0.0f, 0.0f} }
+};
+
+float3 smul(float3 vector, float scalar) {
+    vector.x *= scalar;
+    vector.y *= scalar;
+    vector.z *= scalar;
+
+    return vector;
+}
+
+struct Ray get_ray(struct Camera* cam, uint a, uint b) {
+    
+    float3 w = smul(normalize(cam->eye.d), -1.0f);
+    float3 u = normalize(cross(cam->up, w));
+    float3 v = cross(w, u);
+
+    float u0 = -1.0f;
+    float v0 = -1.0f;
+    float u1 = 1.0f;
+    float v1 = 1.0f;
+    float d = 2.0f;
+
+    float3 across = smul(u, u1-u0);
+    float3 up = smul(v, v1-v0);
+
+    float an = ((float)a) / (float)HEIGHT;
+    float bn = ((float)b) / (float)WIDTH;
+
+    float3 corner = cam->eye.o + smul(u, u0) + smul(v, v0) - smul(w, d);
+    float3 target = corner + smul(across, an) + smul(up, bn);
+
+
+    struct Ray r;
+    r.o = cam->eye.o;
+    r.d = normalize(target-cam->eye.o);
+
+    return r;
+}
+
+float sphere_intersect(__constant struct Sphere* sphere, struct Ray* r) {
+
+    // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
+    float eps = 1e-4;
+    float3 op = sphere->position - r->o;
+    
+    float b = dot(op, r->d);
+    float det = b * b - dot(op, op) + sphere->radius * sphere->radius;
+
+    if (det < 0.0f) {
+        return 0.0f;
+    } else {
+        det = sqrt(det);
+    }
+
+    if ((b - det) > eps) {
+        return b-det;
+    }
+
+    if ((b + det) > eps) {
+        return b+det;
+    }
+
+    return 0.0f;
+}
+
+
+bool intersect(struct Ray r, float* t, int* id)
+{
+    float inf = 10e20f;
+    *t = inf;
+
+
+    for (int i=0; i<SPHERES_COUNT; i++)  {
+        __constant struct Sphere* sphere = &SPHERES[i];
+        
+        float d = sphere_intersect(sphere, &r);
+
+        if (d != 0.0 && d < *t) {
+            *t = d;
+            *id = i;
+        }
+    }
+
+    return *t < inf;
+}
+
+
+float myabs(float x) {
+    if (x < 0.0f) {
+        return -x;
+    }
+    else {
+        return x;
+    }
+}
+
+
+float3 get_light(struct Ray ray, int depth) {
+    float t = 0.0f;
+    int id = 0;
+
+    if (intersect(ray, &t, &id)) {
+        if (depth > 5) {
+            return SPHERES[id].emission;
+        }
+
+        uint seed = 1;
+        float r1 = 2.0 * PI* srand(&seed);
+        float r2 = srand(&seed);
+        float r2s = sqrt(r2);
+
+
+        // Hitpoint
+        float3 x = ray.o + smul(ray.d, t);
+
+        float3 n = normalize((x - SPHERES[id].position));
+        float3 nl = dot(n, ray.d) < 0.0 ?  n : smul(n, -1.0);
+        
+        float3 w = nl;
+
+        float3 tmpvec = (myabs(w.x) > 0.1f) ? (float3) {0.0f, 1.0f, 0.0f} : (float3) {1.0f, 0.0f, 0.0f};
+        float3 u = normalize(cross(tmpvec, w));
+        float3 v = cross(w, u);
+
+        float3 d = normalize( smul(u, cos(r1)*r2s) + smul(v, sin(r1)*r2s) + smul(w, sqrt(1.0f-r2)) );
+
+        struct Ray nr;
+        nr.o = x;
+        nr.d = d;
+        //return SPHERES[id].emission + SPHERES[id].color; //* get_light(nr, depth+1);
+        return SPHERES[id].color;
+    }
+
+    return (float3) {0.0f, 0.0f, 0.0f};
+} 
+
+
+__kernel void vector_add(__global float3 *output) {
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    //int s = get_global_id(2);
+
+    struct Camera cam;
+    cam.eye.o = (float3) {50.0f, 52.0f, 295.6f};
+    cam.eye.d = (float3) {0.0f, -0.042612f, -1.0f};
+    cam.up = (float3) {1.0f, 0.0f, 0.0f};
+
+    float3 r = (float3) {0.0f, 0.0f, 0.0f};
+    //for(int i=0; i<SAMPLES; i++) {
+        struct Ray ray = get_ray(&cam, i, j);
+        r = r + smul(get_light(ray, 0), 1.0f); // /SAMPLES);
+    //}
+    r = clamp(r, 0.0f, 1.0f);
+
+    output[i*WIDTH + j] = r;
+}
