@@ -6,7 +6,7 @@ use std::io::{BufferedWriter, File};
 use opencl::mem::CLBuffer;
 use std::fmt;
 use std::num::Float;
-
+use opencl::array::*;
 
 #[derive(Show, Copy, Clone, Default)]
 struct Vector {
@@ -33,8 +33,9 @@ fn to_int(x: f32) -> i64
 }
 
 
-const WIDTH: usize = 1024;
+
 const HEIGHT: usize = 768;
+const WIDTH: usize = 1024;
 
 fn main()
 {
@@ -43,8 +44,6 @@ fn main()
 
     let (device, ctx, queue) = opencl::util::create_compute_context().unwrap();
     println!("{}", device.name());
-
-    let c: CLBuffer<Vector> = ctx.create_buffer(1024*768, opencl::cl::CL_MEM_WRITE_ONLY);
 
     let program = ctx.create_program_from_source(ker);
     match program.build(&device) {
@@ -57,12 +56,29 @@ fn main()
     }
 
     let kernel = program.create_kernel("vector_add");
+    
 
+/*    let c: CLBuffer<Vector> = ctx.create_buffer(WIDTH*HEIGHT, opencl::cl::CL_MEM_WRITE_ONLY);
     kernel.set_arg(0, &c);
-
-    let event = queue.enqueue_async_kernel(&kernel, (1024is, 768is), None, ());
-
     let vec_c: Vec<Vector> = queue.get(&c, &event);
+*/
+    let arr_in_x = Array2D::new(768, 1024, |x, y| { 0.0f32 });
+    let arr_x = ctx.create_buffer_from(&arr_in_x, opencl::cl::CL_MEM_READ_WRITE);
+    kernel.set_arg(0, &arr_x);
+
+    let arr_in_y = Array2D::new(768, 1024, |x, y| { 0.0f32 });
+    let arr_y = ctx.create_buffer_from(&arr_in_y, opencl::cl::CL_MEM_READ_WRITE);
+    kernel.set_arg(1, &arr_y);
+    
+    let arr_in_z = Array2D::new(768, 1024, |x, y| { 0.0f32 });
+    let arr_z = ctx.create_buffer_from(&arr_in_z, opencl::cl::CL_MEM_READ_WRITE);
+    kernel.set_arg(2, &arr_z);
+
+    let event = queue.enqueue_async_kernel(&kernel, (768is, 1024is), None, ());
+
+    let vec_x: Array2D<(f32)> = queue.get(&arr_x, ());
+    let vec_y: Array2D<(f32)> = queue.get(&arr_y, ());
+    let vec_z: Array2D<(f32)> = queue.get(&arr_z, ());
 
     println!("\nWriting Image...");
     let file = File::create(&Path::new("image.ppm"));
@@ -71,26 +87,11 @@ fn main()
     writer.write(format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes()).ok();
     for i in range(0, HEIGHT) {
         for j in range(0, WIDTH) {
-            let color: Vector = vec_c[i*WIDTH+j];
-            writer.write(format!("{} {} {} ", to_int(color.x), to_int(color.y), to_int(color.z)).as_bytes()).ok();
+            let x: f32 = vec_x.get(i, j);
+            let y: f32 = vec_y.get(i, j);
+            let z: f32 = vec_z.get(i, j);
+
+            writer.write(format!("{} {} {} ", to_int(x), to_int(y), to_int(z)).as_bytes()).ok();
         }
     }
-}
-
-fn string_from_slice<T: fmt::String>(slice: &[T]) -> String {
-    let mut st = String::from_str("[");
-    let mut first = true;
-
-    for i in slice.iter() {
-        if !first {
-            st.push_str(", ");
-        }
-        else {
-            first = false;
-        }
-        st.push_str(&*i.to_string())
-    }
-
-    st.push_str("]");
-    return st
 }
