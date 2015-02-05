@@ -1,15 +1,8 @@
 __constant uint WIDTH = 1024;
 __constant uint HEIGHT = 768;
-__constant uint SAMPLES = 100;
+__constant uint SAMPLES = 250;
 __constant uint SPHERES_COUNT = 9;
 __constant float PI = 3.14159265358979323846264338327950288f;
-
-float srand(unsigned int* seed)
-{
-  *seed = ((*seed) * 16807 ) % 2147483647;
-  return  (float)(*seed) * 4.6566129e-10;
-}
-
 
 struct Ray {
     float3 o;
@@ -136,43 +129,60 @@ float myabs(float x) {
     }
 }
 
+int rand(int* seed)
+{
+    int const a = 16807; //ie 7**5
+    int const m = 2147483647; //ie 2**31-1
 
-float3 get_light(struct Ray ray, int depth) {
+    *seed = (*seed * a) % m;
+    return *seed;
+}
+
+float3 get_light(struct Ray r, int* seed) {
     float t = 0.0f;
     int id = 0;
+    struct Ray ray = r;
 
-    if (intersect(ray, &t, &id)) {
-        if (depth > 5) {
-            return SPHERES[id].emission;
+    float3 color = (float3) {1.0f, 1.0f, 1.0f};
+    float3 result = (float3) {0.0f, 0.0f, 0.0f};
+
+    for(int i=0; i < 5; i++) {
+
+        if (intersect(ray, &t, &id)) {
+            float r1 = 2.0 * PI * ( ((float)rand(seed)) / 2147483647.0f);
+            float r2 = ( ((float)rand(seed)) / 2147483647.0f);
+            float r2s = sqrt(r2);
+
+            // Hitpoint
+            float3 x = ray.o + smul(ray.d, t);
+
+            float3 n = normalize((x - SPHERES[id].position));
+            float3 nl = dot(n, ray.d) < 0.0 ?  n : smul(n, -1.0);
+            
+            float3 w = nl;
+
+            float3 tmpvec = (myabs(w.x) > 0.1f) ? (float3) {0.0f, 1.0f, 0.0f} : (float3) {1.0f, 0.0f, 0.0f};
+            float3 u = normalize(cross(tmpvec, w));
+            float3 v = cross(w, u);
+
+            float3 d = normalize( smul(u, cos(r1)*r2s) + smul(v, sin(r1)*r2s) + smul(w, sqrt(1.0f-r2)) );
+
+            ray.o = x;
+            ray.d = d;
+
+            // 1.0 * e0 + c0 * (e1 + c1 * (e2 + c2 * (e3 + c3 * ... )))
+            // e0 + c0*e1 + c0*c1*e2 + c0*c1*c2*e3 + ...
+            result = result + (SPHERES[id].emission * color);
+            color = color * SPHERES[id].color;
+
+            //return SPHERES[id].color;
         }
-
-        uint seed = 1;
-        float r1 = 2.0 * PI* srand(&seed);
-        float r2 = srand(&seed);
-        float r2s = sqrt(r2);
-
-        // Hitpoint
-        float3 x = ray.o + smul(ray.d, t);
-
-        float3 n = normalize((x - SPHERES[id].position));
-        float3 nl = dot(n, ray.d) < 0.0 ?  n : smul(n, -1.0);
-        
-        float3 w = nl;
-
-        float3 tmpvec = (myabs(w.x) > 0.1f) ? (float3) {0.0f, 1.0f, 0.0f} : (float3) {1.0f, 0.0f, 0.0f};
-        float3 u = normalize(cross(tmpvec, w));
-        float3 v = cross(w, u);
-
-        float3 d = normalize( smul(u, cos(r1)*r2s) + smul(v, sin(r1)*r2s) + smul(w, sqrt(1.0f-r2)) );
-
-        struct Ray nr;
-        nr.o = x;
-        nr.d = d;
-        //return SPHERES[id].emission + SPHERES[id].color; //* get_light(nr, depth+1);
-        return SPHERES[id].color;
+        else {
+            return result;
+        }
     }
 
-    return (float3) {0.0f, 0.0f, 0.0f};
+    return result;
 } 
 
 
@@ -185,11 +195,14 @@ __kernel void vector_add(__global float *outx, __global float *outy, __global fl
     cam.eye.d = (float3) {0.0f, -0.042612f, -1.0f};
     cam.up = (float3) {1.0f, 0.0f, 0.0f};
 
-    float3 r = (float3) {0.0f, 0.0f, 0.0f};
+
+    int seed = 1;
 
     struct Ray ray = get_ray(cam, i, j);
-    r = get_light(ray, 0);
-    r = clamp(r, 0.0f, 1.0f);
+    float3 r = (float3) {0.0f, 0.0f, 0.0f};
+    for (int i=0; i<SAMPLES; i++) {
+        r = r + smul(get_light(ray, &seed), 1.0f/SAMPLES);
+    }
 
     outx[i + j*HEIGHT] = r.x;
     outy[i + j*HEIGHT] = r.y;
