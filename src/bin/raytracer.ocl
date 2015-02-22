@@ -1,8 +1,8 @@
 __constant uint WIDTH = 1024;
 __constant uint HEIGHT = 768;
-__constant uint SAMPLES = 250;
 __constant uint SPHERES_COUNT = 9;
-__constant float PI = 3.14159265358979323846264338327950288f;
+__constant float PI = 3.14159f;
+
 
 struct Ray {
     float3 o;
@@ -24,18 +24,16 @@ struct Camera {
 
 
 __constant struct Sphere SPHERES[] = {
-   (struct Sphere){1e5f, (float3) { 1e5+1.0f,40.8f,81.6f},   (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .25f, .25f} }, //Left 
-   (struct Sphere){1e5f, (float3) {-1e5+99.0f,40.8f,81.6f},  (float3) {0.0f, 0.0f, 0.0f}, (float3) {.25f, .25f, .75f} }, //Rght 
+   (struct Sphere){1e5f, (float3) { 1e5f+1.0f,40.8f,81.6f},   (float3) {0.0f, 0.0f, 0.0f}, (float3) {0.75f, 0.25f, 0.25f} }, //Left 
+   (struct Sphere){1e5f, (float3) {-1e5f+99.0f,40.8f,81.6f},  (float3) {0.0f, 0.0f, 0.0f}, (float3) {.25f, .25f, .75f} }, //Rght 
    (struct Sphere){1e5f, (float3) {50.0f, 40.8f, 1e5f},      (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .75f, .75f} }, //Back 
-   (struct Sphere){1e5f, (float3) {50.0f, 40.8f,-1e5+600.0f},  (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.00f, 1.00f, 1.00f} }, //Frnt 
+   (struct Sphere){1e5f, (float3) {50.0f, 40.8f,-1e5f+600.0f},  (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.00f, 1.00f, 1.00f} }, //Frnt 
    (struct Sphere){1e5f, (float3) {50.0f, 1e5f, 81.6f},      (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .75f, .75f} }, //Botm 
    (struct Sphere){1e5f, (float3) {50.0f,-1e5f+81.6f,81.6f}, (float3) {0.0f, 0.0f, 0.0f}, (float3) {.75f, .75f, .75f} }, //Top 
-   (struct Sphere){16.5f,(float3) {27.0f,16.5f,47.0f},         (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.0f, 1.0f, 1.0f*.999f} }, 
-   (struct Sphere){16.5f,(float3) {73.0f,16.5f,78.0f},         (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.0f, 1.0f, 1.0f*.999f} },
+   (struct Sphere){16.5f,(float3) {27.0f,16.5f,47.0f},         (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.0f, 1.0f, 1.0f} }, 
+   (struct Sphere){16.5f,(float3) {73.0f,16.5f,78.0f},         (float3) {0.0f, 0.0f, 0.0f}, (float3) {1.0f, 1.0f, 1.0f} },
    (struct Sphere){600.0f, (float3) {50.0f,681.6f-0.27f,81.6f}, (float3) {12.0f, 12.0f, 12.0f},(float3) {0.0f, 0.0f, 0.0f} }
 };
-
-
 float3 smul(float3 vector, float scalar) {
     vector.x *= scalar;
     vector.y *= scalar;
@@ -44,11 +42,28 @@ float3 smul(float3 vector, float scalar) {
     return vector;
 }
 
+float3 mynormalize(float3 input) {
+    float n = 1.0f / sqrt((input.x * input.x + input.y * input.y + input.z * input.z)) ;
+    return smul(input, n);
+}
+
+float3 mycross(float3 self, float3 b) {
+    float3 ret;
+    ret.x = self.y * b.z - self.z * b.y;
+    ret.y = self.z * b.x - self.x * b.z;
+    ret.z = self.x * b.y - self.y * b.x;
+    return ret;
+}
+
+float mydot(float3 self, float3 other) {
+    return (self).x * (other).x + (self).y * (other).y + (self).z * (other).z;
+}
+
 struct Ray get_ray(struct Camera cam, uint a, uint b) {
     
-    float3 w = smul(normalize(cam.eye.d), -1.0f);
-    float3 u = normalize(cross(cam.up, w));
-    float3 v = cross(w, u);
+    float3 w = smul(mynormalize(cam.eye.d), -1.0f);
+    float3 u = mynormalize(mycross(cam.up, w));
+    float3 v = mycross(w, u);
 
     float u0 = -1.0f;
     float v0 = -1.0f;
@@ -67,7 +82,7 @@ struct Ray get_ray(struct Camera cam, uint a, uint b) {
 
     struct Ray r;
     r.o = cam.eye.o;
-    r.d = normalize(target - cam.eye.o);
+    r.d = mynormalize(target - cam.eye.o);
 
     return r;
 }
@@ -75,11 +90,11 @@ struct Ray get_ray(struct Camera cam, uint a, uint b) {
 float sphere_intersect(__constant struct Sphere* sphere, struct Ray* r)  {
 
     // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-    float eps = 1e-4;
+    float eps = 1e-4f;
     float3 op = sphere->position - r->o;
     
-    float b = dot(op, r->d);
-    float det = (b * b) - dot(op, op) + (sphere->radius * sphere->radius);
+    float b = mydot(op, r->d);
+    float det = (b * b) - mydot(op, op) + (sphere->radius * sphere->radius);
 
     if (det < 0.0f) {
         return 0.0f;
@@ -110,7 +125,7 @@ bool intersect(struct Ray r, float* t, int* id)
         
         float d = sphere_intersect(sphere, &r);
 
-        if (d != 0.0 && d < *t) {
+        if (d != 0.0f && d < *t) {
             *t = d;
             *id = i;
         }
@@ -128,17 +143,9 @@ float myabs(float x) {
         return x;
     }
 }
+ 
 
-int rand(int* seed)
-{
-    int const a = 16807; //ie 7**5
-    int const m = 2147483647; //ie 2**31-1
-
-    *seed = (*seed * a) % m;
-    return *seed;
-}
-
-float3 get_light(struct Ray r, int* seed) {
+float3 get_light(struct Ray r, float r1, float r2) {
     float t = 0.0f;
     int id = 0;
     struct Ray ray = r;
@@ -146,26 +153,33 @@ float3 get_light(struct Ray r, int* seed) {
     float3 color = (float3) {1.0f, 1.0f, 1.0f};
     float3 result = (float3) {0.0f, 0.0f, 0.0f};
 
-    for(int i=0; i < 5; i++) {
+//    if (r2 > 1000) {
+//        //exit(-1);
+//    }
+    
+    for(int d=0; d < 10; d++) {
 
         if (intersect(ray, &t, &id)) {
-            float r1 = 2.0 * PI * ( ((float)rand(seed)) / 2147483647.0f);
-            float r2 = ( ((float)rand(seed)) / 2147483647.0f);
-            float r2s = sqrt(r2);
+                                                                                  
+            float r_1 = 2*PI*r1;                                     
+            float r_2 = r2;                                          
+            float xx = cos(r_1)*sin(r_2);                                 
+            float yy = sin(r_1)*sin(r_2);                                
+            float zz = cos(r1);     
 
             // Hitpoint
             float3 x = ray.o + smul(ray.d, t);
 
-            float3 n = normalize((x - SPHERES[id].position));
-            float3 nl = dot(n, ray.d) < 0.0 ?  n : smul(n, -1.0);
+            float3 n = mynormalize((x - SPHERES[id].position));
+            float3 nl = mydot(n, ray.d) < 0.0f ?  n : smul(n, -1.0f);
             
             float3 w = nl;
 
             float3 tmpvec = (myabs(w.x) > 0.1f) ? (float3) {0.0f, 1.0f, 0.0f} : (float3) {1.0f, 0.0f, 0.0f};
-            float3 u = normalize(cross(tmpvec, w));
-            float3 v = cross(w, u);
+            float3 u = mynormalize(mycross(tmpvec, w));
+            float3 v = mycross(w, u);
 
-            float3 d = normalize( smul(u, cos(r1)*r2s) + smul(v, sin(r1)*r2s) + smul(w, sqrt(1.0f-r2)) );
+            float3 d = mynormalize( smul(u, xx) + smul(v, yy) + smul(w, zz) );
 
             ray.o = x;
             ray.d = d;
@@ -174,7 +188,6 @@ float3 get_light(struct Ray r, int* seed) {
             // e0 + c0*e1 + c0*c1*e2 + c0*c1*c2*e3 + ...
             result = result + (SPHERES[id].emission * color);
             color = color * SPHERES[id].color;
-
             //return SPHERES[id].color;
         }
         else {
@@ -186,7 +199,8 @@ float3 get_light(struct Ray r, int* seed) {
 } 
 
 
-__kernel void vector_add(__global float *outx, __global float *outy, __global float *outz) {
+__kernel void vector_add(__global float *outx, __global float *outy, __global float *outz,  __global float *randoms,
+__global float *samples) {
     int i = get_global_id(0);
     int j = get_global_id(1);
 
@@ -195,14 +209,14 @@ __kernel void vector_add(__global float *outx, __global float *outy, __global fl
     cam.eye.d = (float3) {0.0f, -0.042612f, -1.0f};
     cam.up = (float3) {1.0f, 0.0f, 0.0f};
 
-
-    int seed = 1;
-
+    int S = 100;
     struct Ray ray = get_ray(cam, i, j);
     float3 r = (float3) {0.0f, 0.0f, 0.0f};
-    for (int i=0; i<SAMPLES; i++) {
-        r = r + smul(get_light(ray, &seed), 1.0f/SAMPLES);
+    
+    for (int s=0; s<S; s++) {
+        r = r + get_light(ray, randoms[s], randoms[S+s]);
     }
+    r = smul(r, 1.0f/S);
 
     outx[i + j*HEIGHT] = r.x;
     outy[i + j*HEIGHT] = r.y;

@@ -4,16 +4,11 @@ extern crate opencl;
 
 use std::io::{BufferedWriter, File};
 use opencl::mem::CLBuffer;
+use opencl::hl::EventList;
 use std::fmt;
+use std::vec::{Vec};
 use std::num::Float;
 use opencl::array::*;
-
-#[derive(Show, Copy, Clone, Default)]
-struct Vector {
-    x: f32,
-    y: f32,
-    z: f32
-}
 
 fn clamp(x: f32) -> f32
 {
@@ -32,10 +27,9 @@ fn to_int(x: f32) -> i64
     (clamp(x).powf(1.0f32 / 2.2f32) * 255.0 + 0.5) as i64
 }
 
-
-
 const HEIGHT: usize = 768;
 const WIDTH: usize = 1024;
+const SAMPLES: usize = 20;
 
 fn main()
 {
@@ -56,12 +50,7 @@ fn main()
     }
 
     let kernel = program.create_kernel("vector_add");
-    
 
-/*    let c: CLBuffer<Vector> = ctx.create_buffer(WIDTH*HEIGHT, opencl::cl::CL_MEM_WRITE_ONLY);
-    kernel.set_arg(0, &c);
-    let vec_c: Vec<Vector> = queue.get(&c, &event);
-*/
     let arr_in_x = Array2D::new(768, 1024, |x, y| { 0.0f32 });
     let arr_x = ctx.create_buffer_from(&arr_in_x, opencl::cl::CL_MEM_READ_WRITE);
     kernel.set_arg(0, &arr_x);
@@ -74,11 +63,29 @@ fn main()
     let arr_z = ctx.create_buffer_from(&arr_in_z, opencl::cl::CL_MEM_READ_WRITE);
     kernel.set_arg(2, &arr_z);
 
-    let event = queue.enqueue_async_kernel(&kernel, (768is, 1024is), None, ());
+    let mut vec_randoms: Vec<f32> = Vec::new();
+    for i in range(0, SAMPLES*3) {
+        let a: f32 = std::rand::random();
+        assert!(a < 1.0f32);
+        assert!(a > 0.0f32);
+        vec_randoms.push(a);
+    }
+    let randoms: CLBuffer<f32> = ctx.create_buffer_from(&vec_randoms, opencl::cl::CL_MEM_READ_ONLY);
+    kernel.set_arg(3, &randoms);
 
+    let samples = ctx.create_buffer_from(vec![12.0f32], opencl::cl::CL_MEM_READ_WRITE);
+    kernel.set_arg(4, &samples);
+
+    queue.enqueue_async_kernel(&kernel, (HEIGHT, WIDTH), None, ()).wait();
+   
+   
     let vec_x: Array2D<(f32)> = queue.get(&arr_x, ());
     let vec_y: Array2D<(f32)> = queue.get(&arr_y, ());
     let vec_z: Array2D<(f32)> = queue.get(&arr_z, ());
+    let samples: Vec<(f32)> = queue.get(&samples, ());
+    println!("{:?}", samples[0]);
+
+
 
     println!("\nWriting Image...");
     let file = File::create(&Path::new("image.ppm"));
