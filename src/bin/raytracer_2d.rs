@@ -1,3 +1,6 @@
+#![allow(unstable)]
+#![feature(box_syntax)]
+
 use std::io::prelude::*;
 use std::fs::File;
 use std::ops::{Add, Sub, Mul};
