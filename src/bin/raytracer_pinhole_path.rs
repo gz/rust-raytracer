@@ -1,7 +1,8 @@
 #![allow(unstable)]
 #![feature(box_syntax)]
 
-use std::io::{BufferedWriter, File};
+use std::io::prelude::*;
+use std::fs::File;
 use std::ops::{Add, Sub, Mul};
 use std::num::Float;
 use std::default::Default;
@@ -11,20 +12,20 @@ use std::sync::mpsc::channel;
 use std::sync::mpsc::{Sender, Receiver};
 
 
-#[derive(Show, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 struct Vector {
     x: f64,
     y: f64,
     z: f64
 }
 
-#[derive(Show, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 struct Ray {
     o: Vector,
     d: Vector
 }
 
-#[derive(Show, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 struct Sphere {
     radius: f64,
     position: Vector,
@@ -32,7 +33,7 @@ struct Sphere {
     color: Vector,
 }
 
-#[derive(Show, Default, Clone)]
+#[derive(Debug, Default, Clone)]
 struct Camera {
     eye: Ray, // origin and direction of cam
     // Field of view:
@@ -211,7 +212,7 @@ fn get_light(ray: Ray, depth: usize) -> Vector{
 }
 
 static SPHERES: [Sphere; 9] = [
-    Sphere{radius:1e5 as f64,  position: Vector{ x: (1e5 + 1.0) as f64, y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.25,z: 0.25}}, // Left 
+    Sphere{radius:1e5 as f64,  position: Vector{ x: (1e5 as f64 + 1.0) as f64, y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.25,z: 0.25}}, // Left 
     Sphere{radius:1e5 as f64,  position: Vector{ x:  -1e5 as f64 + 99.0,y: 40.8 as f64, z: 81.6}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.25,y: 0.25,z: 0.75}}, // Rght 
     Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: 40.8 as f64, z: 1e5 as f64}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 0.75,y: 0.75,z: 0.75}}, // Back 
     Sphere{radius:1e5 as f64,  position: Vector{ x: 50 as f64, y: 40.8 as f64, z: -1e5+600 as f64}, emission: Vector{x: 0.0, y: 0.0, z: 0.0 }, color: Vector{x: 1.0, y: 1.0, z: 1.0 }}, // Frnt 
@@ -239,8 +240,8 @@ fn main() {
     let samples: usize = 5000;
     let mut output =  box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
 
-    for i in range(0, HEIGHT) {
-        for j in range(0, WIDTH) {
+    for i in 0..HEIGHT {
+        for j in 0..WIDTH {
             let tx = tx.clone();
             let cam = cam.clone();
             pool.execute(move|| {
@@ -254,20 +255,17 @@ fn main() {
         }
     }
 
-    for p in range(0,WIDTH*HEIGHT-1) {
+    for p in 0..WIDTH*HEIGHT-1 {
         print!("\rRaytracing... ({:.0}%)", (p as f64) / ((WIDTH*HEIGHT) as f64) * 100.0);
         let (i, j, color) = rx.recv().unwrap(); 
         output[i][j] = color;
     }
     
-    println!("\nWriting Image...");
-    let file = File::create(&Path::new("image.ppm"));
-    let mut writer = BufferedWriter::new(file);
-
-    writer.write(format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes()).ok();
-    for i in range(0, HEIGHT) {
-        for j in range(0, WIDTH) {
-            writer.write(format!("{} {} {} ", to_int(output[i][j].x), to_int(output[i][j].y), to_int(output[i][j].z)).as_bytes()).ok();
+    println!("Writing Image...");
+    let mut f = File::create("image.ppm").unwrap();
+    f.write_all( format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes() ).ok();
+    for i in 0..HEIGHT {
+        for j in 0..WIDTH {
+            f.write_all( format!("{} {} {} ", to_int(output[i][j].x), to_int(output[i][j].y), to_int(output[i][j].z)).as_bytes() ).ok();
         }
-    }
-}
+    }}

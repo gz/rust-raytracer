@@ -1,25 +1,22 @@
-#![allow(unstable)]
-#![feature(box_syntax)]
-
-use std::io::{BufferedWriter, File};
+use std::io::prelude::*;
+use std::fs::File;
 use std::ops::{Add, Sub, Mul};
 use std::num::Float;
 
-#[derive(Show)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 struct Vector {
     x: f64,
     y: f64,
     z: f64
 }
 
-#[derive(Show, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 struct Ray {
     o: Vector,
     d: Vector
 }
 
-#[derive(Show, Clone)]
+#[derive(Debug, Clone)]
 struct Sphere {
     radius: f64,
     position: Vector,
@@ -154,8 +151,8 @@ fn main() {
     println!("Raytracing...");
 
     let mut output = box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
-    for i in range(0, HEIGHT) {
-        for j in range(0, WIDTH) {
+    for i in 0..HEIGHT {
+        for j in 0..WIDTH {
             let origin: Vector = Vector { x: i as f64, y: j as f64, z: 0.0};
             let direction: Vector = Vector { x: 0.0, y: 0.0, z: -1.0};
             let ray: Ray = Ray{o: origin, d: direction};
@@ -174,13 +171,11 @@ fn main() {
     }
 
     println!("Writing Image...");
-    let file = File::create(&Path::new("image.ppm"));
-    let mut writer = BufferedWriter::new(file);
-
-    writer.write(format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes()).ok();
-    for i in range(0, HEIGHT) {
-        for j in range(0, WIDTH) {
-            writer.write(format!("{} {} {} ", to_int(output[i][j].x), to_int(output[i][j].y), to_int(output[i][j].z)).as_bytes()).ok();
+    let mut f = File::create("image.ppm").unwrap();
+    f.write_all( format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes() ).ok();
+    for i in 0..HEIGHT {
+        for j in 0..WIDTH {
+            f.write_all( format!("{} {} {} ", to_int(output[i][j].x), to_int(output[i][j].y), to_int(output[i][j].z)).as_bytes() ).ok();
         }
     }
 }

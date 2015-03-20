@@ -1,32 +1,32 @@
-#![allow(unstable)]
 #![feature(box_syntax)]
 
-use std::io::{BufferedWriter, File};
+use std::io::prelude::*;
+use std::fs::File;
 use std::ops::{Add, Sub, Mul};
 use std::num::Float;
 use std::default::Default;
 
-#[derive(Show, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 struct Vector {
     x: f64,
     y: f64,
     z: f64
 }
 
-#[derive(Show, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 struct Ray {
     o: Vector,
     d: Vector
 }
 
-#[derive(Show, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 struct Sphere {
     radius: f64,
     position: Vector,
     color: Vector,
 }
 
-#[derive(Show, Default)]
+#[derive(Debug, Default)]
 struct Camera {
     eye: Ray, // origin and direction of cam
     // Field of view:
@@ -208,8 +208,8 @@ fn main() {
     cam.up = Vector{x: 0.0, y: 1.0, z: 0.0};
 
     let mut output = box [[Vector{x: 0.0, y: 0.0, z: 0.0}; WIDTH]; HEIGHT];
-    for i in range(0, HEIGHT) {
-        for j in range(0, WIDTH) {
+    for i in 0..HEIGHT {
+        for j in 0..WIDTH {
             let ray: Ray = get_ray(&cam, i, j);
             let mut t: f64 = 0.0;
             let mut id: usize = 0;
@@ -225,13 +225,11 @@ fn main() {
     }
 
     println!("Writing Image...");
-    let file = File::create(&Path::new("image.ppm"));
-    let mut writer = BufferedWriter::new(file);
-
-    writer.write(format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes()).ok();
-    for i in range(0, HEIGHT) {
-        for j in range(0, WIDTH) {
-            writer.write(format!("{} {} {} ", to_int(output[i][j].x), to_int(output[i][j].y), to_int(output[i][j].z)).as_bytes()).ok();
+    let mut f = File::create("image.ppm").unwrap();
+    f.write_all( format!("P3\n{} {}\n{}\n", WIDTH, HEIGHT, 255).as_bytes() ).ok();
+    for i in 0..HEIGHT {
+        for j in 0..WIDTH {
+            f.write_all( format!("{} {} {} ", to_int(output[i][j].x), to_int(output[i][j].y), to_int(output[i][j].z)).as_bytes() ).ok();
         }
     }
 }
