@@ -13,7 +13,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "opencl"
 version = "0.3.0-dev"
-source = "git+https://github.com/luqmana/rust-opencl.git#cf16b8a65a0cf8b05ebf2d2fe07684440558d46f"
+source = "git+https://github.com/luqmana/rust-opencl.git#d574309b82f45a4df34ecf43f4328dd911194fbc"
 dependencies = [
  "log 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
