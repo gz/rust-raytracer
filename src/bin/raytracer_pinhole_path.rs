@@ -246,7 +246,7 @@ fn main() {
             let cam = cam.clone();
             pool.execute(move|| {
                 let mut r: Vector = Default::default();
-                for _ in range(0, samples) {
+                for _ in 0..samples {
                     let ray: Ray = get_ray(&cam, i, j);
                     r = &r + &get_light(ray, 0).smul(1.0/samples as f64);
                 }
